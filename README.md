@@ -1,5 +1,10 @@
 # Shared Mobility Redistribution
 
+## Table of Contents
+1. [High Level Overview](#high-level-overview)
+2. [Dependencies](#dependencies)
+3. [Build](#build)
+
 ## High Level Overview
 Shared mobility has experienced significant growth in recent years and has the potential to reduce the climate impact of transportation through a more efficient use of resources in terms of vehicle utilisation, road space and energy.
 
@@ -9,3 +14,16 @@ Customer preferences however may result in asymmetric demand for journey origin 
 Service providers can counter this by redistributing their vehicles but of course these redistributing efforts come with costs.
 
 This project is to explore the application of Reinforcement Learning to vehicle rebalancing decisions. An openai gym environment will be developed to test the effectiveness of a range of Reinforcement Learning techniques to optimising redistributing efforts across a range of conditions. 
+
+## Dependencies
+<ul>
+    <li>The latest version of Python</li>
+    <li>OpenAI installed on device</li>
+    <li>IPython installed on device</li>
+</ul>
+
+## Build
+Run the following command to run the Random Decisions version of project
+```bash
+python3 ./src/taxi-random.py
+```
