@@ -1,9 +1,9 @@
 # Shared Mobility Redistribution
 
 ## Table of Contents
-1. [High Level Overview](#high-level-overview)
-2. [Dependencies](#dependencies)
-3. [Build](#build)
+  - [High Level Overview](#high-level-overview)
+  - [Dependencies](#dependencies)
+  - [Build](#build)
 
 ## High Level Overview
 Shared mobility has experienced significant growth in recent years and has the potential to reduce the climate impact of transportation through a more efficient use of resources in terms of vehicle utilisation, road space and energy.
@@ -23,7 +23,17 @@ This project is to explore the application of Reinforcement Learning to vehicle 
 </ul>
 
 ## Build
-Run the following command to run the Random Decisions version of project
+To Run the Random Decision implementation of the Gym Taxi Game 
 ```bash
-python3 ./src/taxi-random.py
+make random-taxi
+```
+
+To Run the Q-Learning implementation of the Gym Taxi Game
+```bash
+make q-learning-taxi
+```
+
+To see a explanation of all Makefile Commands
+```bash
+make help
 ```
