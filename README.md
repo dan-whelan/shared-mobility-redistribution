@@ -33,6 +33,11 @@ To Run the Q-Learning implementation of the Gym Taxi Game
 make q-learning-taxi
 ```
 
+To Run the State Action Reward State Action (SARSA) implemetation of Taxi Game
+```bash
+make sarsa-taxi
+```
+
 To see a explanation of all Makefile Commands
 ```bash
 make help

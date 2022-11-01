@@ -30,3 +30,7 @@ random-taxi:
 ## Run Q-Learning Algo with Taxi Implementation
 q-learning-taxi:
 	@python3 ./src/taxi-q-learning.py
+
+## Run SARSA Algo with Taxi implementation
+sarsa-taxi:
+	@python3 ./src/taxi-SARSA.py
