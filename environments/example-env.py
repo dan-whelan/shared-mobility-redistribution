@@ -16,7 +16,7 @@ MAP = [
     "| : : : : | |",
     "| | : | | : |",
     "| | : | | : |",
-    "|Y| | : :B| |"
+    "|Y| | : :B| |",
     "+-----------+",
 ]
 
@@ -151,3 +151,38 @@ class ExampleEnv(Env):
             self.render_mode = "ansi"
         if self.render_mode == "ansi":
             return self._render_text()
+    
+    def _render_text(self):
+        description = self.desc.copy().tolist()
+        outfile = StringIO()
+
+        out = [[c.decode("utf-8") for c in line] for line in description]
+        taxi_row, taxi_col, pass_index, destination_index = self.decode(self.s)
+        
+        def underline(x):
+            return "_" if x == " " else x
+        
+        if pass_index < 4:
+            out[1+taxi_row][2*taxi_col+1] = utils.colorize(
+                out[1+taxi_row][2*taxi_col+1], "yellow", highlight=True
+            )
+            pos_i, pos_j = self.locs[pass_index]
+            out[1+pos_i][2*pos_j+1] = utils.colorize(
+                out[1+pos_i][2*pos_j+1], "blue", bold=True
+            )
+        else:
+            out[1+taxi_row][2*taxi_col+1] = utils.colorize(
+                underline(out[1+taxi_row][2*taxi_col+1]), "green", highlight=True
+            )
+        dest_i, dest_j = self.locs[destination_index]
+        out[1+dest_i][2*dest_j+1] = utils.colorize(out[1+dest_i][2*dest_j+1], "magenta")
+        outfile.write("\n".join(["".join(row) for row in out]) + "\n")
+        if self.last_action is not None:
+            outfile.write(
+                f"  ({['South', 'North', 'East', 'West', 'Pickup', 'Dropoff'][self.last_action]}\n"
+            )
+        else:
+            outfile.write("\n")
+        
+        with closing(outfile):
+            return outfile.getvalue()
