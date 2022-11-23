@@ -25,12 +25,12 @@ help:
 
 ## Run Random Taxi Generator
 random-taxi:
-	@python3 ./src/taxi-random.py
+	@python3 ./RLWithTaxiEnv/taxi-random.py
 
 ## Run Q-Learning Algo with Taxi Implementation
 q-learning-taxi:
-	@python3 ./src/taxi-q-learning.py
+	@python3 ./RLWithTaxiEnv/taxi-q-learning.py
 
 ## Run SARSA Algo with Taxi implementation
 sarsa-taxi:
-	@python3 ./src/taxi-SARSA.py
+	@python3 ./RLWithTaxiEnv/taxi-SARSA.py
