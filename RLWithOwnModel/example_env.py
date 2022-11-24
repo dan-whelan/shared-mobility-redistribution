@@ -5,9 +5,8 @@ from typing import Optional
 
 import numpy as np
 
-from gym import Env, logger, spaces, utils
+from gym import Env, spaces, utils
 from gym.envs.toy_text.utils import categorical_sample
-from gym.error import DependencyNotInstalled
 
 MAP = [
     "+-----------+",
@@ -32,7 +31,7 @@ class ExampleEnv(Env):
         self.locs = locs = [(0, 0), (0, 5), (5, 0), (5, 4)]
         self.locs_colours = [(255, 0, 0), (0, 255, 0), (255, 255, 0), (0, 0, 255)]
 
-        num_states = 720
+        num_states = 864
         num_rows = 6
         num_cols = 6
         max_row = num_rows - 1
@@ -129,22 +128,22 @@ class ExampleEnv(Env):
         return mask
     
     def step(self, action):
-        transitions = self.P[self.s][action]
+        transitions = self.P[self.state][action]
         index = categorical_sample([t[0] for t in transitions], self.np_random)
         probability, state, reward, trunc = transitions[index]
 
-        self.s = state
+        self.state = state
         self.last_action = action
 
         return (int(state), reward, False, trunc, {"prob": probability, "action_mask": self.action_mask(state)})
 
     def reset(self, *, seed: Optional[int] = None, options: Optional[dict] = None):
         super().reset(seed=seed)
-        self.s(categorical_sample(self.initial_state_distribution, self.np_random))
+        self.state(categorical_sample(self.initial_state_distribution, self.np_random))
         self.last_action = None
         self.truck_orientation = 0
 
-        return int(self.s), {"prob": 1.0, "action_mask": self.action_mask(self.s)}
+        return int(self.state), {"prob": 1.0, "action_mask": self.action_mask(self.state)}
 
     def render(self):
         if self.render_mode == None:
@@ -157,7 +156,7 @@ class ExampleEnv(Env):
         outfile = StringIO()
 
         out = [[c.decode("utf-8") for c in line] for line in description]
-        taxi_row, taxi_col, pass_index, destination_index = self.decode(self.s)
+        taxi_row, taxi_col, pass_index, destination_index = self.decode(self.state)
         
         def underline(x):
             return "_" if x == " " else x

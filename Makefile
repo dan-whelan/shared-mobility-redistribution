@@ -34,3 +34,7 @@ q-learning-taxi:
 ## Run SARSA Algo with Taxi implementation
 sarsa-taxi:
 	@python3 ./RLWithTaxiEnv/taxi-SARSA.py
+
+## Run Q-Learning Algo with Custome Example Implementation
+q-learning-model:
+	@python3 ./RLWithOwnModel/model-q-learning.py
