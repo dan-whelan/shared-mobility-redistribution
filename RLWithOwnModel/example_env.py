@@ -57,11 +57,11 @@ class ExampleEnv(Env):
                             if action == 0:
                                 new_row = min(row+1, max_row)
                             elif action == 1:
-                                new_row = min(row-1, 0)
+                                new_row = max(row-1, 0)
                             if action == 2 and self.desc[1+row, 2*col+2] == b":":
                                 new_col = min(col+1, max_col)
                             elif action == 3 and self.desc[1+row, 2*col] == b":":
-                                new_col = min(col-1, 0)
+                                new_col = max(col-1, 0)
                             elif action == 4:
                                 if pass_index < 4 and taxi_loc == locs[pass_index]:
                                     new_pass_index = 4
@@ -107,43 +107,30 @@ class ExampleEnv(Env):
         out.append(i % 6)
         i = i // 6
         out.append(i)
-        assert 0 <= i < 6
         return reversed(out)
-    
-    def action_mask(self, state: int):
-        mask = np.zeros(6, dtype=np.int8)
-        taxi_row, taxi_col, pass_index, destination_index = self.decode(state)
-        if taxi_row < 5:
-            mask[0] = 1
-        if taxi_row > 0:
-            mask[1] = 1
-        if taxi_col < 5 and self.desc[taxi_row+1, 2*taxi_col+2] == b":":
-            mask[2] = 1
-        if taxi_col < 5 and self.desc[taxi_row+1, 2*taxi_col] == b":":
-            mask[3] = 1
-        if pass_index < 4 and (taxi_row, taxi_col) == self.locs[pass_index]:
-            mask[4] = 1
-        if pass_index == 4 and ((taxi_row, taxi_col) == self.locs[destination_index] or (taxi_row, taxi_col) in self.locs):
-            mask[5] = 1
-        return mask
     
     def step(self, action):
         transitions = self.P[self.state][action]
         index = categorical_sample([t[0] for t in transitions], self.np_random)
-        probability, state, reward, trunc = transitions[index]
+        _, state, reward, trunc = transitions[index]
 
         self.state = state
         self.last_action = action
 
-        return (int(state), reward, False, trunc, {"prob": probability, "action_mask": self.action_mask(state)})
+        done = False
+
+        if reward == 20:
+            done = True
+
+        return (int(state), reward, done, trunc)
 
     def reset(self, *, seed: Optional[int] = None, options: Optional[dict] = None):
         super().reset(seed=seed)
-        self.state(categorical_sample(self.initial_state_distribution, self.np_random))
+        self.state = categorical_sample(self.initial_state_distribution, self.np_random)
         self.last_action = None
         self.truck_orientation = 0
 
-        return int(self.state), {"prob": 1.0, "action_mask": self.action_mask(self.state)}
+        return int(self.state)
 
     def render(self):
         if self.render_mode == None:

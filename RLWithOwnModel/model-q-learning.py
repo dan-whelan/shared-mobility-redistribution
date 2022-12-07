@@ -34,8 +34,7 @@ def main():
     max_steps = 99
 
     for episode in range(num_episodes):
-        this_state = env.reset()
-        state = this_state[0]
+        state = env.reset()
             
         done = False
 
@@ -45,7 +44,7 @@ def main():
             else:
                 action = np.argmax(q_table[state,:])
             
-            new_state, reward, done, trunc, info = env.step(action)
+            new_state, reward, done, _ = env.step(action)
 
             q_table[state, action] = q_table[state, action] + learning_rate * (reward + discount_rate * np.max(q_table[new_state,:])-q_table[state, action])
 
@@ -59,8 +58,7 @@ def main():
     print(f"Training Completed over {num_episodes} episodes")
     input("Press Enter to watch the trained agent...")
 
-    this_state = env.reset()
-    state = this_state[0]
+    state = env.reset()
     done = False
     rewards = 0
 
@@ -70,7 +68,7 @@ def main():
         print("Step {}".format(s+1))
 
         action = np.argmax(q_table[state,:])
-        new_state, reward, done, trunc, info = env.step(action)
+        new_state, reward, done, trunc = env.step(action)
         rewards += reward
         print(f"score: {rewards}")
         state = new_state
