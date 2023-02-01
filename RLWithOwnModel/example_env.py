@@ -21,14 +21,23 @@ MAP = [
 
 class ExampleEnv(Env):
     metadata = {
-        "render_modes": ["ansi", "rgb_array"],
-        "render_fps": 4 
+        "render_modes": ["ansi", "rgb_array"]
     }
+
 
     def __init__(self, render_mode: Optional[str] = None):
         self.desc = np.asarray(MAP, dtype="c")
+        self.num_of_docks = 5
+
+        self.down = 0
+        self.up = 1
+        self.right = 2
+        self.left = 3
+        self.pickup = 4
+        self.dropoff = 5
 
         self.locs = locs = [(0, 0), (0, 5), (2, 2), (5, 0), (5, 4)]
+
 
         num_states = 1080
         num_rows = 6
@@ -46,32 +55,32 @@ class ExampleEnv(Env):
                 for pass_index in range(len(locs) + 1):
                     for destination_index in range(len(locs)):
                         state = self.encode(row, col, pass_index, destination_index)
-                        if pass_index < 5 and pass_index != destination_index:
+                        if pass_index < self.num_of_docks and pass_index != destination_index:
                             self.initial_state_distribution[state] += 1
                         for action in range(num_actions):
                             new_row, new_col, new_pass_index = row, col, pass_index
                             reward = (-1)
                             terminated = False
                             taxi_loc = (row, col)
-                            if action == 0:
+                            if action == self.down:
                                 new_row = min(row+1, max_row)
-                            elif action == 1:
+                            elif action == self.up:
                                 new_row = max(row-1, 0)
-                            if action == 2 and self.desc[1+row, 2*col+2] == b":":
+                            if action == self.left and self.desc[1+row, 2*col+2] == b":":
                                 new_col = min(col+1, max_col)
-                            elif action == 3 and self.desc[1+row, 2*col] == b":":
+                            elif action == self.right and self.desc[1+row, 2*col] == b":":
                                 new_col = max(col-1, 0)
-                            elif action == 4:
-                                if pass_index < 5 and taxi_loc == locs[pass_index]:
-                                    new_pass_index = 5
+                            elif action == self.pickup:
+                                if pass_index < self.num_of_docks and taxi_loc == locs[pass_index]:
+                                    new_pass_index = self.num_of_docks
                                 else:
                                     reward = -10
-                            elif action == 5:
-                                if pass_index == 5 and (taxi_loc == locs[destination_index]):
+                            elif action == self.dropoff:
+                                if pass_index == self.num_of_docks and (taxi_loc == locs[destination_index]):
                                     new_pass_index = destination_index
                                     terminated = True
                                     reward = 20
-                                elif pass_index == 5 and (taxi_loc in locs):
+                                elif pass_index == self.num_of_docks and (taxi_loc in locs):
                                     new_pass_index = locs.index(taxi_loc)
                                 else:
                                     reward = -10
@@ -93,14 +102,14 @@ class ExampleEnv(Env):
         i += taxi_col
         i *= 6
         i += pass_index
-        i *= 5
+        i *= self.num_of_docks
         i += destination_index
         return i
 
     def decode(self, i):
         out = []
         out.append(i % 4)
-        i = i // 5
+        i = i // self.num_of_docks
         out.append(i % 6)
         i = i // 6
         out.append(i % 6)
@@ -148,7 +157,7 @@ class ExampleEnv(Env):
         def underline(x):
             return "_" if x == " " else x
         
-        if pass_index < 5:
+        if pass_index < self.num_of_docks:
             out[1+taxi_row][2*taxi_col+1] = utils.colorize(
                 out[1+taxi_row][2*taxi_col+1], "yellow", highlight=True
             )

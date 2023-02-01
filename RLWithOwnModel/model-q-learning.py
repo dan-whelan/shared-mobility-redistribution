@@ -30,7 +30,7 @@ def main():
     epsilon = 1
     decay_rate = 0.005
 
-    num_episodes = 2000
+    num_episodes = 5000
     max_steps = 99
 
     for episode in range(num_episodes):

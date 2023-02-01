@@ -23,7 +23,7 @@ def main():
     frames = []
 
     epsilon = 0.9
-    num_episodes = 10000
+    num_episodes = 5000
     max_steps = 99
     learning_rate = 0.85
     discount_rate = 0.95
