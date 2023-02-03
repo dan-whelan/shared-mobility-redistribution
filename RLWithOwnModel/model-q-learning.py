@@ -2,7 +2,7 @@ from time import sleep
 from IPython.display import clear_output 
 import numpy as np
 import random
-from example_env import ExampleEnv
+from redistribution_env import RedistributionEnv
 
 def print_frames(frames):
     for i, frame in enumerate(frames):
@@ -15,7 +15,7 @@ def print_frames(frames):
         clear_output()
 
 def main(): 
-    env = ExampleEnv(render_mode="ansi")
+    env = RedistributionEnv(render_mode="ansi")
     env.reset()
 
     state_size = env.observation_space.n

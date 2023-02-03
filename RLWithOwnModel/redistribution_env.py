@@ -10,16 +10,16 @@ from gym.envs.toy_text.utils import categorical_sample
 
 MAP = [
     "+-----------+",
-    "|R: | : : |G|",
+    "|D: | : : |D|",
     "| : | : : | |",
-    "| : :W: : | |",
+    "| : :D: : | |",
     "| | : | | : |",
     "| | : | | : |",
-    "|Y| | : :B| |",
+    "|D| | : :D| |",
     "+-----------+",
 ]
 
-class ExampleEnv(Env):
+class RedistributionEnv(Env):
     metadata = {
         "render_modes": ["ansi", "rgb_array"]
     }
@@ -37,7 +37,7 @@ class ExampleEnv(Env):
         self.dropoff = 5
 
         self.locs = locs = [(0, 0), (0, 5), (2, 2), (5, 0), (5, 4)]
-
+        self.bikes = bikes = [5, 5, 5, 0, 0]
 
         num_states = 1080
         num_rows = 6
@@ -50,15 +50,18 @@ class ExampleEnv(Env):
             state: {action: [] for action in range(num_actions)}
             for state in range(num_states)
         }
+        #Change logic of for loop
+        # - link bikes present to docks 
+
         for row in range(num_rows):
             for col in range(num_cols):
-                for pass_index in range(len(locs) + 1):
+                for dock_index in range(len(locs) + 1):
                     for destination_index in range(len(locs)):
-                        state = self.encode(row, col, pass_index, destination_index)
-                        if pass_index < self.num_of_docks and pass_index != destination_index:
+                        state = self.encode(row, col, dock_index, destination_index)
+                        if dock_index < self.num_of_docks and dock_index != destination_index:
                             self.initial_state_distribution[state] += 1
                         for action in range(num_actions):
-                            new_row, new_col, new_pass_index = row, col, pass_index
+                            new_row, new_col, new_pass_index = row, col, dock_index
                             reward = (-1)
                             terminated = False
                             taxi_loc = (row, col)
@@ -66,25 +69,41 @@ class ExampleEnv(Env):
                                 new_row = min(row+1, max_row)
                             elif action == self.up:
                                 new_row = max(row-1, 0)
-                            if action == self.left and self.desc[1+row, 2*col+2] == b":":
+                            if action == self.right and self.desc[1+row, 2*col+2] == b":":
                                 new_col = min(col+1, max_col)
-                            elif action == self.right and self.desc[1+row, 2*col] == b":":
+                            elif action == self.left and self.desc[1+row, 2*col] == b":":
                                 new_col = max(col-1, 0)
                             elif action == self.pickup:
-                                if pass_index < self.num_of_docks and taxi_loc == locs[pass_index]:
+                                if dock_index < self.num_of_docks and taxi_loc == locs[dock_index]:
                                     new_pass_index = self.num_of_docks
                                 else:
                                     reward = -10
+                                # TODO Change logic of pickup
+                                #   - if truck at dock and bikes present greater than balance fig
+                                #       pickup bike to reduce to balance fig
+                                #       increase bikes on truck
+                                #     else:
+                                #       reward -10  
                             elif action == self.dropoff:
-                                if pass_index == self.num_of_docks and (taxi_loc == locs[destination_index]):
+                                if dock_index == self.num_of_docks and (taxi_loc == locs[destination_index]):
                                     new_pass_index = destination_index
                                     terminated = True
                                     reward = 20
-                                elif pass_index == self.num_of_docks and (taxi_loc in locs):
+                                elif dock_index == self.num_of_docks and (taxi_loc in locs):
                                     new_pass_index = locs.index(taxi_loc)
                                 else:
                                     reward = -10
+                                # TODO Change logic of dropoff
+                                #   - if truck at dock and bikes present less than balance fig
+                                #       dropoff bikes to bring up to balance fig
+                                #       decrease bikes on truck
+                                #     else:
+                                #       reward -10
                             
+                            # TODO Add new check for termination
+                            #   if all bike docks are balanced and equal balance figure
+                            #       terminate sim
+                            #       reward 20
                             new_state = self.encode(new_row, new_col, new_pass_index, destination_index)
                             self.P[state][action].append(
                                 (1.0, new_state, reward, terminated)
@@ -133,6 +152,7 @@ class ExampleEnv(Env):
         return (int(state), reward, done, trunc)
 
     def reset(self, *, seed: Optional[int] = None, options: Optional[dict] = None):
+        # TODO Need to update reset to incorporate bikes and docks 
         super().reset(seed=seed)
         self.state = categorical_sample(self.initial_state_distribution, self.np_random)
         self.last_action = None
@@ -170,7 +190,6 @@ class ExampleEnv(Env):
                 underline(out[1+taxi_row][2*taxi_col+1]), "green", highlight=True
             )
         dest_i, dest_j = self.locs[destination_index]
-        out[1+dest_i][2*dest_j+1] = utils.colorize(out[1+dest_i][2*dest_j+1], "magenta")
         outfile.write("\n".join(["".join(row) for row in out]) + "\n")
         if self.last_action is not None:
             outfile.write(
