@@ -36,8 +36,12 @@ class RedistributionEnv(Env):
         self.pickup = 4
         self.dropoff = 5
 
-        self.locs = locs = [(0, 0), (0, 5), (2, 2), (5, 0), (5, 4)]
-        self.bikes = bikes = [5, 5, 5, 0, 0]
+        self.dock_position = 0
+        self.bikes_at_loc = 1
+
+        self.locs = locs = [[(0, 0), 0], [(0, 5), 0], [(2, 2), 5], [(4, 5), 5], [(5, 0), 5]]
+        self.balancing_fig = 3
+        self.bikes_on_truck = 0
 
         num_states = 1080
         num_rows = 6
@@ -55,74 +59,63 @@ class RedistributionEnv(Env):
 
         for row in range(num_rows):
             for col in range(num_cols):
-                for dock_index in range(len(locs) + 1):
-                    for destination_index in range(len(locs)):
-                        state = self.encode(row, col, dock_index, destination_index)
-                        if dock_index < self.num_of_docks and dock_index != destination_index:
-                            self.initial_state_distribution[state] += 1
-                        for action in range(num_actions):
-                            new_row, new_col, new_pass_index = row, col, dock_index
-                            reward = (-1)
-                            terminated = False
-                            taxi_loc = (row, col)
-                            if action == self.down:
-                                new_row = min(row+1, max_row)
-                            elif action == self.up:
-                                new_row = max(row-1, 0)
-                            if action == self.right and self.desc[1+row, 2*col+2] == b":":
-                                new_col = min(col+1, max_col)
-                            elif action == self.left and self.desc[1+row, 2*col] == b":":
-                                new_col = max(col-1, 0)
-                            elif action == self.pickup:
-                                if dock_index < self.num_of_docks and taxi_loc == locs[dock_index]:
-                                    new_pass_index = self.num_of_docks
-                                else:
-                                    reward = -10
-                                # TODO Change logic of pickup
-                                #   - if truck at dock and bikes present greater than balance fig
-                                #       pickup bike to reduce to balance fig
-                                #       increase bikes on truck
-                                #     else:
-                                #       reward -10  
-                            elif action == self.dropoff:
-                                if dock_index == self.num_of_docks and (taxi_loc == locs[destination_index]):
-                                    new_pass_index = destination_index
+                for dock_index in range(len(locs)):
+                    state = self.encode(row, col, dock_index)
+                    if dock_index < self.num_of_docks:
+                        self.initial_state_distribution[state] += 1
+                    for action in range(num_actions):
+                        new_row, new_col, new_dock_index = row, col, dock_index
+                        reward = (-1)
+                        terminated = False
+                        truck_loc = (row, col)
+                        if action == self.down:
+                            new_row = min(row+1, max_row)
+                        elif action == self.up:
+                            new_row = max(row-1, 0)
+                        elif action == self.right and self.desc[1+row, 2*col+2] == b":":
+                            new_col = min(col+1, max_col)
+                        elif action == self.left and self.desc[1+row, 2*col] == b":":
+                            new_col = max(col-1, 0)
+                        elif action == self.pickup:
+                            if truck_loc == locs[dock_index][self.dock_position] and locs[dock_index][self.bikes_at_loc] > self.balancing_fig:
+                                moving_bikes = locs[dock_index][self.bikes_at_loc] - self.balancing_fig
+                                self.bikes_on_truck += moving_bikes
+                                locs[dock_index][self.bikes_at_loc] -= moving_bikes
+                            else:
+                                reward = -10
+                        elif action == self.dropoff:
+                            if truck_loc == locs[dock_index][self.dock_position] and locs[dock_index][self.bikes_at_loc] < self.balancing_fig:
+                                moving_bikes = self.balancing_fig - locs[dock_index][self.bikes_at_loc]
+                                locs[dock_index][self.bikes_at_loc] += moving_bikes
+                                self.bikes_on_truck -= moving_bikes
+                                docks_balanced = 0
+                                for dock in range(self.num_of_docks):
+                                    if locs[dock][self.bikes_at_loc] == self.balancing_fig:
+                                        docks_balanced+=1
+                                if docks_balanced == self.num_of_docks and self.bikes_on_truck == 0:
                                     terminated = True
-                                    reward = 20
-                                elif dock_index == self.num_of_docks and (taxi_loc in locs):
-                                    new_pass_index = locs.index(taxi_loc)
-                                else:
-                                    reward = -10
-                                # TODO Change logic of dropoff
-                                #   - if truck at dock and bikes present less than balance fig
-                                #       dropoff bikes to bring up to balance fig
-                                #       decrease bikes on truck
-                                #     else:
-                                #       reward -10
-                            
-                            # TODO Add new check for termination
-                            #   if all bike docks are balanced and equal balance figure
-                            #       terminate sim
-                            #       reward 20
-                            new_state = self.encode(new_row, new_col, new_pass_index, destination_index)
-                            self.P[state][action].append(
-                                (1.0, new_state, reward, terminated)
-                            )
-        
+                                    reward = 20   
+                            else:
+                                reward = -10
+
+                        new_state = self.encode(new_row, new_col, new_dock_index)
+                        self.P[state][action].append(
+                            (1.0, new_state, reward, terminated)
+                        )
+    
         self.initial_state_distribution /= self.initial_state_distribution.sum()
         self.action_space = spaces.Discrete(num_actions)
         self.observation_space = spaces.Discrete(num_states)
 
         self.render_mode = render_mode
     
-    def encode(self, taxi_row, taxi_col, pass_index, destination_index):
+    def encode(self, taxi_row, taxi_col, dock_index):
         i = taxi_row
         i *= 6
         i += taxi_col
         i *= 6
-        i += pass_index
+        i += dock_index
         i *= self.num_of_docks
-        i += destination_index
         return i
 
     def decode(self, i):
@@ -152,11 +145,13 @@ class RedistributionEnv(Env):
         return (int(state), reward, done, trunc)
 
     def reset(self, *, seed: Optional[int] = None, options: Optional[dict] = None):
-        # TODO Need to update reset to incorporate bikes and docks 
         super().reset(seed=seed)
         self.state = categorical_sample(self.initial_state_distribution, self.np_random)
         self.last_action = None
         self.truck_orientation = 0
+        self.locs = [[(0, 0), 0], [(0, 5), 0], [(2, 2), 5], [(4, 5), 5], [(5, 0), 5]]
+        self.bikes_on_truck = 0
+        self.balancing_fig = 3
 
         return int(self.state)
 
@@ -172,16 +167,16 @@ class RedistributionEnv(Env):
         outfile = StringIO()
 
         out = [[c.decode("utf-8") for c in line] for line in description]
-        taxi_row, taxi_col, pass_index, destination_index = self.decode(self.state)
+        taxi_row, taxi_col, dock_index, destination_index = self.decode(self.state)
         
         def underline(x):
             return "_" if x == " " else x
         
-        if pass_index < self.num_of_docks:
+        if dock_index < self.num_of_docks:
             out[1+taxi_row][2*taxi_col+1] = utils.colorize(
                 out[1+taxi_row][2*taxi_col+1], "yellow", highlight=True
             )
-            pos_i, pos_j = self.locs[pass_index]
+            pos_i, pos_j = self.locs[dock_index][self.dock_position]
             out[1+pos_i][2*pos_j+1] = utils.colorize(
                 out[1+pos_i][2*pos_j+1], "blue", bold=True
             )
@@ -189,7 +184,6 @@ class RedistributionEnv(Env):
             out[1+taxi_row][2*taxi_col+1] = utils.colorize(
                 underline(out[1+taxi_row][2*taxi_col+1]), "green", highlight=True
             )
-        dest_i, dest_j = self.locs[destination_index]
         outfile.write("\n".join(["".join(row) for row in out]) + "\n")
         if self.last_action is not None:
             outfile.write(
