@@ -51,7 +51,7 @@ def main():
             state = new_state
 
             if done == True:
-                break;
+                break
         
         epsilon = np.exp(-decay_rate*episode)
 

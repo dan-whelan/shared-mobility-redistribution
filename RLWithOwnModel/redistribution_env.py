@@ -39,7 +39,7 @@ class RedistributionEnv(Env):
         self.dock_position = 0
         self.bikes_at_loc = 1
 
-        self.locs = locs = [[(0, 0), 0], [(0, 5), 0], [(2, 2), 5], [(4, 5), 5], [(5, 0), 5]]
+        self.locs = locs = [[(0, 0), 0], [(0, 5), 0], [(2, 2), 5], [(5, 4), 5], [(5, 0), 5]]
         self.balancing_fig = 3
         self.bikes_on_truck = 0
 
@@ -56,12 +56,14 @@ class RedistributionEnv(Env):
         }
         #Change logic of for loop
         # - link bikes present to docks 
-
+        docks_balanced = 0
+        pickup_reward = self.num_of_docks
+        dropoff_reward = self.num_of_docks
         for row in range(num_rows):
             for col in range(num_cols):
                 for dock_index in range(len(locs)):
                     state = self.encode(row, col, dock_index)
-                    if dock_index < self.num_of_docks:
+                    if dock_index < self.num_of_docks and docks_balanced != self.num_of_docks:
                         self.initial_state_distribution[state] += 1
                     for action in range(num_actions):
                         new_row, new_col, new_dock_index = row, col, dock_index
@@ -81,6 +83,8 @@ class RedistributionEnv(Env):
                                 moving_bikes = locs[dock_index][self.bikes_at_loc] - self.balancing_fig
                                 self.bikes_on_truck += moving_bikes
                                 locs[dock_index][self.bikes_at_loc] -= moving_bikes
+                                reward = pickup_reward
+                                pickup_reward -= 1
                             else:
                                 reward = -10
                         elif action == self.dropoff:
@@ -88,6 +92,8 @@ class RedistributionEnv(Env):
                                 moving_bikes = self.balancing_fig - locs[dock_index][self.bikes_at_loc]
                                 locs[dock_index][self.bikes_at_loc] += moving_bikes
                                 self.bikes_on_truck -= moving_bikes
+                                reward = dropoff_reward
+                                dropoff_reward -= 1
                                 docks_balanced = 0
                                 for dock in range(self.num_of_docks):
                                     if locs[dock][self.bikes_at_loc] == self.balancing_fig:
@@ -120,7 +126,6 @@ class RedistributionEnv(Env):
 
     def decode(self, i):
         out = []
-        out.append(i % 4)
         i = i // self.num_of_docks
         out.append(i % 6)
         i = i // 6
@@ -167,7 +172,7 @@ class RedistributionEnv(Env):
         outfile = StringIO()
 
         out = [[c.decode("utf-8") for c in line] for line in description]
-        taxi_row, taxi_col, dock_index, destination_index = self.decode(self.state)
+        taxi_row, taxi_col, dock_index = self.decode(self.state)
         
         def underline(x):
             return "_" if x == " " else x
@@ -175,10 +180,6 @@ class RedistributionEnv(Env):
         if dock_index < self.num_of_docks:
             out[1+taxi_row][2*taxi_col+1] = utils.colorize(
                 out[1+taxi_row][2*taxi_col+1], "yellow", highlight=True
-            )
-            pos_i, pos_j = self.locs[dock_index][self.dock_position]
-            out[1+pos_i][2*pos_j+1] = utils.colorize(
-                out[1+pos_i][2*pos_j+1], "blue", bold=True
             )
         else:
             out[1+taxi_row][2*taxi_col+1] = utils.colorize(
