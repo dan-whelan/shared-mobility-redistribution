@@ -16,7 +16,6 @@ def print_frames(frames):
 
 def main(): 
     env = RedistributionEnv(render_mode="ansi")
-    env.reset()
 
     state_size = env.observation_space.n
     action_size = env.action_space.n
@@ -44,7 +43,7 @@ def main():
             else:
                 action = np.argmax(q_table[state,:])
             
-            new_state, reward, done, _ = env.step(action)
+            new_state, reward, done = env.step(state, action)
 
             q_table[state, action] = q_table[state, action] + learning_rate * (reward + discount_rate * np.max(q_table[new_state,:])-q_table[state, action])
 
@@ -68,7 +67,7 @@ def main():
         print("Step {}".format(s+1))
 
         action = np.argmax(q_table[state,:])
-        new_state, reward, done, trunc = env.step(action)
+        new_state, reward, done = env.step(state, action)
         rewards += reward
         print(f"score: {rewards}")
         state = new_state
