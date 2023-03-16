@@ -23,7 +23,7 @@ def main():
     frames = []
 
     epsilon = 0.9
-    num_episodes = 5000
+    num_episodes = 10000
     max_steps = 99
     learning_rate = 0.85
     discount_rate = 0.95
@@ -39,8 +39,8 @@ def main():
             action = env.action_space.sample()
         else:
             action = np.argmax(q_table[state, :])       
-        for step in range(max_steps):
-            new_state, reward, done, trunc = env.step(action)
+        for _ in range(max_steps):
+            new_state, reward, done = env.step(action)
             if np.random.uniform(0,1) < epsilon:
                 new_action = env.action_space.sample()
             else:
@@ -49,21 +49,41 @@ def main():
 
             state = new_state
             action = new_action
-
+            
             if done:
                 break
+
+        if (episode + 1) % 1000 == 0:
+            print("Episode {}/{}".format(episode+1, num_episodes))
+
         epsilon = np.exp(-decay_rate*episode)
     
-    print(f"Training completed over {num_episodes} episodes")
-    input("Press Enter to observe the trained model...")
+    print(f"Training Completed over {num_episodes} episodes")
+    
+    total_rewards = []
+    for _ in range(100):
+        state = env.reset()
+        done = False
+        episode_reward = 0
+
+        while not done:
+            action = np.argmax(q_table[state])
+            state, reward, done = env.step(action)
+            episode_reward += reward
+
+        total_rewards.append(episode_reward)
+
+    print("Average reward over 100 test episodes: {}".format(np.mean(total_rewards)))
+    input("Press Enter to watch the trained agent...")
+
 
     state = env.reset()
     rewards = 0
 
-    for step in range(max_steps):
+    for _ in range(max_steps):
 
         action = np.argmax(q_table[state,:])
-        new_state, reward, done, trunc = env.step(action)
+        new_state, reward, done = env.step(action)
         rewards += reward
         print(f"score: {rewards}")
         state = new_state
