@@ -23,7 +23,7 @@ def load_yaml(path):
 class TrainingConfig():
     def __init__(self, config:dict=None)-> None:
         self.batch_size = config.get("batch_size")
-        self.learning_rate = config.get("learning_rate")
+        self.alpha = config.get("alpha")
         self.loss = config.get("loss")
         self.num_episodes = config.get("num_episodes")
         self.train_steps = config.get("train_steps")

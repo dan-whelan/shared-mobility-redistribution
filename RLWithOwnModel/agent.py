@@ -45,6 +45,7 @@ class QAgent():
         self.last_step = 0
         self.last_episode = 0
         self.id = int(time.time())
+        self.state_dimensions = 1 + env.num_docks + 1
 
         if not os.path.exists(self.model_dir):
             os.makedirs(self.model_dir)
@@ -56,8 +57,8 @@ class QAgent():
     def compile(self):
         n_actions = self.env.action_space.n
 
-        self.model = self.model_class(n_actions).to(self.device)
-        self.target_model = self.model_class(n_actions).to(self.device)
+        self.model = self.model_class(self.state_dimensions, n_actions).to(self.device)
+        self.target_model = self.model_class(self.state_dimensions, n_actions).to(self.device)
         self.target_model.load_state_dict(self.model.state_dict())
         self.target_model.eval()
         self.optimiser = self.get_optimiser()
@@ -67,10 +68,23 @@ class QAgent():
                           (self.config.epsilon.max_epsilon - self.config.epsilon.min_epsilon) * \
                               np.exp(-episode / self.config.epsilon.decay_epsilon)
         return epsilon
+    
+    def state_to_tensor(self, state):
+        truck_position_tensor = torch.tensor([state['truck_position']], dtype=torch.long)
+        bike_states_tensor = torch.tensor(state['bike_states'], dtype=torch.long)
+        bikes_on_truck_tensor = torch.tensor([state['bikes_on_truck']], dtype=torch.long)
+
+        state_tensor = torch.cat([truck_position_tensor, bike_states_tensor, bikes_on_truck_tensor])
+        return state_tensor
 
     def get_action_for_state(self, state):
         with torch.no_grad():
-            predicted = self.model(torch.tensor([state], device=self.device))
+            truck_position = np.array([state['truck_position']])
+            bike_states = np.array(state['bike_states'])
+            bikes_on_truck = np.array([state['bikes_on_truck']])
+
+            state_array = np.concatenate((truck_position, bike_states, bikes_on_truck))
+            predicted = self.model(torch.tensor(state_array, device=self.device))
             action = predicted.max(1)[1]
         return action.item()
         
@@ -95,14 +109,16 @@ class QAgent():
         transitions = self.memory.sample(self.config.training.batch_size)
         batch = Transition(*zip(*transitions))
 
-        state_batch = torch.cat(batch.state)
+        state_batch = torch.stack(batch.state)
+        state_batch = state_batch.squeeze(1) 
         action_batch = torch.cat(batch.action)
         reward_batch = torch.cat(batch.reward)
-        next_state_batch = torch.cat(batch.next_state)
+        next_state_batch = torch.stack(batch.next_state)
+        next_state_batch = next_state_batch.squeeze(1)
         done_batch = torch.cat(batch.done)
 
         predicted_q_value = self.model(state_batch).gather(1, action_batch.unsqueeze(1))
-        
+
         next_state_values= self.target_model(next_state_batch).max(1)[0]
         expected_q_values = (~done_batch * next_state_values * self.config.rl.gamma) + reward_batch
 
@@ -118,9 +134,12 @@ class QAgent():
         self.target_model.load_state_dict(self.model.state_dict())
 
     def remember(self, state, action, next_state, reward, done):
-        self.memory.push(torch.tensor([state], device=self.device, dtype=torch.long),
+        state_tensor = self.state_to_tensor(state).to(self.device)
+        next_state_tensor = self.state_to_tensor(next_state).to(self.device)
+
+        self.memory.push(state_tensor.unsqueeze(0),
                         torch.tensor([action], device=self.device, dtype=torch.long),
-                        torch.tensor([next_state], device=self.device, dtype=torch.long),
+                        next_state_tensor.unsqueeze(0),
                         torch.tensor([reward], device=self.device, dtype=torch.long),
                         torch.tensor([done], device=self.device, dtype=torch.bool))
 

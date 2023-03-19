@@ -1,7 +1,9 @@
 import numpy as np
 from time import sleep
 from IPython.display import clear_output
-from redistribution_env import RedistributionEnv
+from redistribution_env import RedistributionEnv2
+import matplotlib.pyplot as plt
+from config import Config
 
 def print_frames(frames):
     for i, frame in enumerate(frames):
@@ -14,49 +16,112 @@ def print_frames(frames):
         clear_output()
 
 def main():
-    env = RedistributionEnv(render_mode='ansi')
+    env = RedistributionEnv2(render_mode='ansi')
+    config_file = "RLWithOwnModel/config/config.yaml"
+    config = Config(config_file)
     env.reset()
 
-    state_size = env.observation_space.n
-    action_size = env.action_space.n
-
     frames = []
+    episode_durations = []
+    total_rewards = []
+    exploration_rate_vec = []
 
-    epsilon = 0.9
-    num_episodes = 10000
-    max_steps = 99
-    learning_rate = 0.85
-    discount_rate = 0.95
-    decay_rate = 0.005
+    epsilon = config.epsilon.max_epsilon
+    num_episodes = config.training.num_episodes
+    max_steps_per_episode = config.rl.max_steps_per_episode
+    alpha = config.training.alpha
+    gamma = config.rl.gamma
+    epsilon_decay = config.epsilon.decay_epsilon
+    min_epsilon = config.epsilon.min_epsilon
 
-    q_table = np.zeros([state_size, action_size])
+    q_table_shape = (
+        env.observation_space["truck_position"].n,
+        *env.observation_space["bike_states"].nvec,
+        env.observation_space["bikes_on_truck"].n,
+        env.action_space.n
+    )
+
+    q_table = np.zeros(q_table_shape)
+
+    def _moving_average(x, periods=5):
+        if len(x) < periods:
+            return x
+        cumsum = np.cumsum(np.insert(x, 0, 0)) 
+        res = (cumsum[periods:] - cumsum[:-periods]) / periods
+        return np.hstack([x[:periods-1], res])
+
+    def plot_durations():
+        lines = []
+        fig = plt.figure(1, figsize=(15, 7))
+        plt.clf()
+        axis1 = fig.add_subplot(111)
+
+        plt.title('Training...')
+        axis1.set_xlabel('Episode')
+        axis1.set_ylabel('Duration & Rewards')
+        axis1.set_ylim(-3 * max_steps_per_episode, max_steps_per_episode + 10)
+        axis1.plot(episode_durations, color="C1", alpha=0.2)
+        axis1.plot(total_rewards, color="C2", alpha=0.2)
+        mean_steps = _moving_average(episode_durations, periods=5)
+        mean_reward = _moving_average(total_rewards, periods=5)
+        lines.append(axis1.plot(mean_steps, label="steps", color="C1")[0])
+        lines.append(axis1.plot(mean_reward, label="rewards", color="C2")[0])
+
+
+        axis2 = axis1.twinx()
+        axis2.set_ylabel('Epsilon')
+        lines.append(axis2.plot(exploration_rate_vec, label="epsilon", color="C3")[0])
+        labs = [l.get_label() for l in lines]
+        axis1.legend(lines, labs, loc=3)
+        plt.show()
+
+        plt.pause(0.001)
 
     reward = 0
 
-    for episode in range(num_episodes):
-        state = env.reset()
-        if np.random.uniform(0,1) < epsilon:
-            action = env.action_space.sample()
-        else:
-            action = np.argmax(q_table[state, :])       
-        for _ in range(max_steps):
-            new_state, reward, done = env.step(action)
+    try:
+        for episode in range(num_episodes):
+            state = env.reset()
+            state_tuple = (state["truck_position"], *state["bike_states"], state["bikes_on_truck"])
+            done = False
+            step = 0
+            rewards_in_episode = 0
             if np.random.uniform(0,1) < epsilon:
-                new_action = env.action_space.sample()
+                action = env.action_space.sample()
             else:
-                new_action = np.argmax(q_table[new_state, :])  
-            q_table[state, action] = q_table[state, action] + learning_rate * (reward + (discount_rate * q_table[new_state,new_action] - q_table[state, action]))
+                action = np.argmax(q_table[state_tuple])       
+            while not done:
+                new_state, reward, done = env.step(action)
+                new_state_tuple = (new_state["truck_position"], *new_state["bike_states"], new_state["bikes_on_truck"])
+                if np.random.uniform(0,1) < epsilon:
+                    new_action = env.action_space.sample()
+                else:
+                    new_action = np.argmax(q_table[state_tuple])  
+                q_table[state_tuple + (action,)] = ((1-alpha)*q_table[state_tuple + (action,)]) + (alpha * (reward + (gamma * q_table[new_state_tuple + (new_action,)] - q_table[state_tuple + (action,)])))
 
-            state = new_state
-            action = new_action
+                state = new_state
+                state_tuple = new_state_tuple
+                action = new_action
+                
+                rewards_in_episode += reward
+                step += 1
+
+                if done:
+                    episode_durations.append(step)
+                    total_rewards.append(rewards_in_episode)
+                    exploration_rate_vec.append(epsilon)
+                    plot_durations()
+
+            if (episode + 1) % 1000 == 0:
+                print("Episode {}/{}".format(episode+1, num_episodes))
             
-            if done:
-                break
+            if epsilon > min_epsilon:
+                epsilon = np.exp(-epsilon_decay*episode)
+        
+    except KeyboardInterrupt:
+        plot_durations()
+        print("Training has been interrupted")
 
-        if (episode + 1) % 1000 == 0:
-            print("Episode {}/{}".format(episode+1, num_episodes))
-
-        epsilon = np.exp(-decay_rate*episode)
     
     print(f"Training Completed over {num_episodes} episodes")
     
@@ -67,7 +132,8 @@ def main():
         episode_reward = 0
 
         while not done:
-            action = np.argmax(q_table[state])
+            state_tuple = (state["truck_position"], *state["bike_states"], state["bikes_on_truck"])
+            action = np.argmax(q_table[state_tuple,:])
             state, reward, done = env.step(action)
             episode_reward += reward
 
@@ -80,9 +146,9 @@ def main():
     state = env.reset()
     rewards = 0
 
-    for _ in range(max_steps):
-
-        action = np.argmax(q_table[state,:])
+    for _ in range(max_steps_per_episode):
+        state_tuple = (state["truck_position"], *state["bike_states"], state["bikes_on_truck"])
+        action = np.argmax(q_table[state_tuple])
         new_state, reward, done = env.step(action)
         rewards += reward
         print(f"score: {rewards}")
