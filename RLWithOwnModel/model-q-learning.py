@@ -42,39 +42,39 @@ def main():
     )
     Q = np.zeros(q_table_shape)
 
-    # def _moving_average(x, periods=5):
-    #     if len(x) < periods:
-    #         return x
-    #     cumsum = np.cumsum(np.insert(x, 0, 0)) 
-    #     res = (cumsum[periods:] - cumsum[:-periods]) / periods
-    #     return np.hstack([x[:periods-1], res])
+    def _moving_average(x, periods=5):
+        if len(x) < periods:
+            return x
+        cumsum = np.cumsum(np.insert(x, 0, 0)) 
+        res = (cumsum[periods:] - cumsum[:-periods]) / periods
+        return np.hstack([x[:periods-1], res])
 
-    # def plot_durations():
-    #     lines = []
-    #     fig = plt.figure(1, figsize=(15, 7))
-    #     plt.clf()
-    #     axis1 = fig.add_subplot(111)
+    def plot_durations():
+        lines = []
+        fig = plt.figure(1, figsize=(15, 7))
+        plt.clf()
+        axis1 = fig.add_subplot(111)
 
-    #     plt.title('Training...')
-    #     axis1.set_xlabel('Episode')
-    #     axis1.set_ylabel('Duration & Rewards')
-    #     axis1.set_ylim(-3 * max_steps_per_episode, max_steps_per_episode + 10)
-    #     axis1.plot(episode_durations, color="C1", alpha=0.2)
-    #     axis1.plot(total_rewards, color="C2", alpha=0.2)
-    #     mean_steps = _moving_average(episode_durations, periods=5)
-    #     mean_reward = _moving_average(total_rewards, periods=5)
-    #     lines.append(axis1.plot(mean_steps, label="steps", color="C1")[0])
-    #     lines.append(axis1.plot(mean_reward, label="rewards", color="C2")[0])
+        plt.title('Training...')
+        axis1.set_xlabel('Episode')
+        axis1.set_ylabel('Duration & Rewards')
+        axis1.set_ylim(-3 * max_steps_per_episode, max_steps_per_episode + 10)
+        axis1.plot(episode_durations, color="C1", alpha=0.2)
+        axis1.plot(total_rewards, color="C2", alpha=0.2)
+        mean_steps = _moving_average(episode_durations, periods=5)
+        mean_reward = _moving_average(total_rewards, periods=5)
+        lines.append(axis1.plot(mean_steps, label="steps", color="C1")[0])
+        lines.append(axis1.plot(mean_reward, label="rewards", color="C2")[0])
 
 
-    #     axis2 = axis1.twinx()
-    #     axis2.set_ylabel('Epsilon')
-    #     lines.append(axis2.plot(exploration_rate_vec, label="epsilon", color="C3")[0])
-    #     labs = [l.get_label() for l in lines]
-    #     axis1.legend(lines, labs, loc=3)
-    #     plt.show()
+        axis2 = axis1.twinx()
+        axis2.set_ylabel('Epsilon')
+        lines.append(axis2.plot(exploration_rate_vec, label="epsilon", color="C3")[0])
+        labs = [l.get_label() for l in lines]
+        axis1.legend(lines, labs, loc=3)
+        plt.show()
 
-    #     plt.pause(0.001)
+        plt.pause(0.001)
 
     try:
         for episode in range(num_episodes):
@@ -103,7 +103,7 @@ def main():
                     episode_durations.append(step)
                     total_rewards.append(rewards_in_episode)
                     exploration_rate_vec.append(epsilon)
-                    # plot_durations()
+                    plot_durations()
             if (episode + 1) % 1000 == 0:
                 print("Episode {}/{}".format(episode+1, num_episodes))
             
@@ -111,7 +111,7 @@ def main():
                 epsilon = np.exp(-epsilon_decay*episode)
 
     except KeyboardInterrupt:
-        # plot_durations()
+        plot_durations()
         print("Training has been interrupted")
 
     print(f"Training Completed over {num_episodes} episodes")
