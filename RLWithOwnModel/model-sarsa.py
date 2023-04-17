@@ -96,7 +96,7 @@ def main():
                 if np.random.uniform(0,1) < epsilon:
                     new_action = env.action_space.sample()
                 else:
-                    new_action = np.argmax(q_table[state_tuple])  
+                    new_action = np.argmax(q_table[new_state_tuple])  
                 q_table[state_tuple + (action,)] = ((1-alpha)*q_table[state_tuple + (action,)]) + (alpha * (reward + (gamma * q_table[new_state_tuple + (new_action,)] - q_table[state_tuple + (action,)])))
 
                 state = new_state
@@ -125,21 +125,21 @@ def main():
     
     print(f"Training Completed over {num_episodes} episodes")
     
-    total_rewards = []
-    for _ in range(100):
-        state = env.reset()
-        done = False
-        episode_reward = 0
+    # total_rewards = []
+    # for _ in range(100):
+    #     state = env.reset()
+    #     done = False
+    #     episode_reward = 0
 
-        while not done:
-            state_tuple = (state["truck_position"], *state["bike_states"], state["bikes_on_truck"])
-            action = np.argmax(q_table[state_tuple,:])
-            state, reward, done = env.step(action)
-            episode_reward += reward
+    #     while not done:
+    #         state_tuple = (state["truck_position"], *state["bike_states"], state["bikes_on_truck"])
+    #         action = np.argmax(q_table[state_tuple,:])
+    #         state, reward, done = env.step(action)
+    #         episode_reward += reward
 
-        total_rewards.append(episode_reward)
+    #     total_rewards.append(episode_reward)
 
-    print("Average reward over 100 test episodes: {}".format(np.mean(total_rewards)))
+    # print("Average reward over 100 test episodes: {}".format(np.mean(total_rewards)))
     input("Press Enter to watch the trained agent...")
 
 

@@ -35,9 +35,13 @@ q-learning-taxi:
 sarsa-taxi:
 	@python3 ./RLWithTaxiEnv/taxi-SARSA.py
 
-## Run NSGA Algo with Taxi implementation
-nsga-taxi:
-	@python3 ./RLWithTaxiEnv/taxi-nsga.py
+## Run Expected-SARSA Algo with Taxi implementation
+expected-sarsa-taxi:
+	@python3 ./RLWithTaxiEnv/taxi-Expected-Sarsa.py
+
+## Run Double Q-Learning Algo with Taxi implementation
+double-q-taxi:
+	@python3 ./RLWithTaxiEnv/taxi-Double-Q-Learning.py
 
 ## Run Q-Learning Algo with Custom Implementation
 q-learning-model:
@@ -47,10 +51,10 @@ q-learning-model:
 sarsa-model:
 	@python3 ./RLWithOwnModel/model-sarsa.py
 
-## Run DQN Algo with Custom Implementation
-dqn-model:
-	@python3 ./RLWithOwnModel/DQN.py
+## Run Expected-SARSA Algo with Custom Implementation
+expected-sarsa-model:
+	@python3 ./RLWithOwnModel/model-expected-sarsa.py
 
-## Run NSGA Algo with Custom Implementation
-nsga-model:
-	@python3 ./RLWithOwnModel/model-nsga.py
+## Run Double Q-Learning Algo with Custom Implementation
+double-q-model:
+	@python3 ./RLWithOwnModel/model-double-q-learning.py

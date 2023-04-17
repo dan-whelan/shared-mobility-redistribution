@@ -2,6 +2,7 @@ from contextlib import closing
 from io import StringIO
 from os import path
 from typing import Optional, Tuple
+import random
 
 import numpy as np
 
@@ -19,9 +20,11 @@ MAP = [
     "+-------------------+",
 ]
 
+
+
 class RedistributionEnv2(Env):
 
-    def __init__(self, num_docks=8, max_bikes=8, num_rows=6, num_cols=6, num_actions = 6, render_mode="ansi", max_step_per_episode=200, max_bikes_on_truck=5):
+    def __init__(self, num_docks=5, max_bikes=10, num_rows=6, num_cols=6, num_actions = 6, render_mode="ansi", max_step_per_episode=400, max_bikes_on_truck=5):
         self.num_docks = num_docks
         self.max_bikes = max_bikes
         self.num_rows = num_rows
@@ -44,15 +47,20 @@ class RedistributionEnv2(Env):
         self.dropoff = 5
 
         self.timestep = 0
-        self.balanced = 0
-        self.underbalanced = 1
-        self.overbalanced = 2
 
         self.max_timestep = max_step_per_episode
         self.max_bikes_on_truck = max_bikes_on_truck
         
-        self.locs = [(0, 0), (0, 5), (1, 8), (2, 2), (3, 6), (4, 8), (5, 0), (5, 4)]
-        self.bike_state = np.random.randint((self.max_bikes)+1, size=self.num_docks)
+        # self.locs = [(0, 0), (0, 5), (1, 8), (2, 2), (3, 6), (4, 8), (5, 0), (5, 5)]
+        self.locs = [(0, 0), (0, 5), (2, 2), (5, 0), (5, 4)]
+        self.bike_state = []
+        total_sum = self.max_bikes
+        for _ in range(self.num_docks - 1):
+          rand_num = random.randint(0, total_sum)
+          self.bike_state.append(rand_num)
+          total_sum -= rand_num
+        self.bike_state.append(total_sum)
+        random.shuffle(self.bike_state)
         count = 0
         for i in range(len(self.bike_state)):
             count += self.bike_state[i]
@@ -61,6 +69,8 @@ class RedistributionEnv2(Env):
         self.bikes_on_truck = 0
         self.curr_row = 3
         self.curr_col = 3
+
+        self.render_mode = render_mode
 
     def step(self, action) -> Tuple[dict, float, bool]:
         self.lastaction = action
@@ -139,14 +149,21 @@ class RedistributionEnv2(Env):
         super().reset(seed=seed)
         self.lastaction = None
         self.timestep = 0
-        self.bike_state = np.random.randint((self.max_bikes)+1, size=self.num_docks)
+        self.bike_state = []
+        total_sum = self.max_bikes
+        for _ in range(self.num_docks - 1):
+          rand_num = random.randint(0, total_sum)
+          self.bike_state.append(rand_num)
+          total_sum -= rand_num
+        self.bike_state.append(total_sum)
+        random.shuffle(self.bike_state)
         count = 0
         for i in range(len(self.bike_state)):
             count += self.bike_state[i]
         self.balanced_bikes = count // self.num_docks
         self.bikes_on_truck = 0
         self.state = {
-            "truck_position": self._to_truck_position(3, 3),
+            "truck_position": self._to_truck_position(5, 3),
             "bike_states": self.bike_state,
             "bikes_on_truck": self.bikes_on_truck
         }
@@ -180,7 +197,3 @@ class RedistributionEnv2(Env):
         with closing(outfile):
             return outfile.getvalue()
 
-if __name__ == '__main__':
-    env = RedistributionEnv2()
-    print(env.bike_state)
-    

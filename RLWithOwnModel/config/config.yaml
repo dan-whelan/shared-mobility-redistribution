@@ -1,6 +1,6 @@
 training:
   batch_size: 128
-  alpha: 0.15
+  alpha: 0.3
   loss: huber
   num_episodes: 10000
   train_steps: 1000000
@@ -13,13 +13,13 @@ optimizer:
   lr_decay: 5000
 
 rl:
-  gamma: 0.60
-  max_steps_per_episode: 200
+  gamma: 0.99
+  max_steps_per_episode: 400
   target_model_update_episodes: 20
   max_queue_length: 50000
 
 epsilon:
   max_epsilon: 1
   min_epsilon: 0.01
-  decay_epsilon: 0.001
+  decay_epsilon: 0.0008
   
